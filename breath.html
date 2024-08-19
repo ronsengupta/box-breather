@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Box Breathing with Voice</title>
+    <style>
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #f0f0f0;
+            font-family: Arial, sans-serif;
+        }
+        #container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        #box {
+            width: 200px;
+            height: 200px;
+            border: 2px solid #333;
+            position: relative;
+            margin-top: 20px;
+        }
+        .bubble {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background-color: #3498db;
+            position: absolute;
+            opacity: 0;
+            transition: opacity 0.25s ease-in-out;
+        }
+        #instruction {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 18px;
+            text-align: center;
+        }
+        #timer, #cycle-counter {
+            font-size: 16px;
+            margin: 5px 0;
+        }
+        #start-button {
+            margin-top: 20px;
+            padding: 10px 20px;
+            font-size: 16px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <div id="container">
+        <div id="cycle-counter">Cycle: 1</div>
+        <div id="timer">Total time: 00:00</div>
+        <div id="box">
+            <div id="instruction">Click Start to begin</div>
+        </div>
+        <button id="start-button">Start</button>
+    </div>
+
+    <script>
+        const box = document.getElementById('box');
+        const instruction = document.getElementById('instruction');
+        const timerDisplay = document.getElementById('timer');
+        const cycleCounterDisplay = document.getElementById('cycle-counter');
+        const startButton = document.getElementById('start-button');
+
+        const cycle = [
+            { text: "Breathe In", side: "top", voice: "Breathe in" },
+            { text: "Hold", side: "right", voice: "Hold" },
+            { text: "Breathe Out", side: "bottom", voice: "Breathe out" },
+            { text: "Hold", side: "left", voice: "Hold" }
+        ];
+
+        const positions = {
+            top: { x: [25, 75, 125, 175], y: -10 },
+            right: { x: 210, y: [25, 75, 125, 175] },
+            bottom: { x: [175, 125, 75, 25], y: 210 },
+            left: { x: -10, y: [175, 125, 75, 25] }
+        };
+
+        let startTime;
+        let lastPhaseIndex = -1;
+        let animationId;
+
+        startButton.addEventListener('click', () => {
+            startButton.style.display = 'none';
+            startBreathing();
+        });
+
+        function startBreathing() {
+            startTime = Date.now();
+            updateBreathing();
+        }
+
+        function updateBreathing() {
+            const elapsedSeconds = Math.floor((Date.now() - startTime) / 1000);
+            const cycleSecond = elapsedSeconds % 16 + 1;
+            const phaseIndex = Math.floor((cycleSecond - 1) / 4);
+            const bubbleIndex = (cycleSecond - 1) % 4;
+
+            updateTimer(elapsedSeconds);
+            updateCycleCounter(cycleSecond);
+            updateInstruction(phaseIndex);
+            updateBubbles(phaseIndex, bubbleIndex);
+
+            if (phaseIndex !== lastPhaseIndex) {
+                speakInstruction(cycle[phaseIndex].voice);
+                lastPhaseIndex = phaseIndex;
+            }
+
+            animationId = requestAnimationFrame(updateBreathing);
+        }
+
+        function updateTimer(seconds) {
+            const minutes = Math.floor(seconds / 60).toString().padStart(2, '0');
+            const remainingSeconds = (seconds % 60).toString().padStart(2, '0');
+            timerDisplay.textContent = `Total time: ${minutes}:${remainingSeconds}`;
+        }
+
+        function updateCycleCounter(cycleSecond) {
+            cycleCounterDisplay.textContent = `Cycle: ${cycleSecond}`;
+        }
+
+        function updateInstruction(phaseIndex) {
+            instruction.textContent = cycle[phaseIndex].text;
+        }
+
+        function updateBubbles(phaseIndex, bubbleIndex) {
+            box.innerHTML = '<div id="instruction">' + instruction.textContent + '</div>';
+            const { side } = cycle[phaseIndex];
+            for (let i = 0; i <= bubbleIndex; i++) {
+                const bubble = document.createElement('div');
+                bubble.className = 'bubble';
+                bubble.style.left = `${positions[side].x[i] || positions[side].x}px`;
+                bubble.style.top = `${positions[side].y[i] || positions[side].y}px`;
+                bubble.style.opacity = 1;
+                box.appendChild(bubble);
+            }
+        }
+
+        function speakInstruction(text) {
+            if ('speechSynthesis' in window) {
+                const utterance = new SpeechSynthesisUtterance(text);
+                speechSynthesis.speak(utterance);
+            }
+        }
+    </script>
+</body>
+</html>
